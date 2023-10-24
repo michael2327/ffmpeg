@@ -1,0 +1,44 @@
+vid="/mnt/512/13.mkv"
+intro="/home/milk/intro/1920-1080-24.mp4"
+conv="/mnt/512/filmdone"
+
+if [ ! -d "$conv" ]; then
+echo "Creating conv..."
+mkdir "$conv"
+fi
+
+check_file_size() {
+	local filesize
+	filesize=$(du -m "$1" | awk '{ print $1 }')
+	if [ "$filesize" -gt 3990 ]; then
+		return
+	else
+		return 1
+	fi
+}
+
+filename=$(basename -- "$vid")
+extention="${filename##*.}"
+filename="${filename%.*}"
+
+crf=17
+while true; do
+	ffmpeg -i "$intro" -i "$vid" -filter_complex \
+	"[0:v]scale=1920:1080,setdar=16/9,setpts=PTS-STARTPTS[v0]; \
+	[1:v]scale=1920:1080,setdar=16/9,setpts=PTS-STARTPTS[v1]; \
+	[v0][0:1][v1][1:1]concat=n=2:v=1:a=1[outv][outa]" \
+	-map "[outv]" -map "[outa]" -c:v libx265 -n -crf "$crf" -c:a aac -r 24 "$conv/$filename.mp4"
+
+	if [ $? -eq 0 ]; then
+		if check_file_size "$conv/$filename.mp4"; then
+			crf=$(echo "$crf + 0.05" | bc -l)
+			rm "$conv/$filename.mp4"
+		else
+			echo "Congradulation! =) File $vid done!"
+			break
+		fi
+	else
+		echo "Error $vid"
+		exit 1
+	fi
+done
