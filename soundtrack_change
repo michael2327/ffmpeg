@@ -1,0 +1,29 @@
+#!/bin/bash
+
+video="/mnt/4tb/nonconverted/down/naruto"
+audio="/mnt/4tb/nonconverted/down/sound"
+output="/mnt/4tb/nonconverted/down/narutoS"
+
+if [ ! -d "$output" ]; then
+	echo "output create..."
+	mkdir "$output"
+fi
+
+for video_file in "$video"/*.mkv; do
+
+	filename=$(basename -- "$video_file")
+	extension="${filename##*.}"
+	filename="${filename%.*}"
+
+	audio_file="$audio/$filename.mka"
+
+	output_file="$output/$filename.mkv"
+	ffmpeg -i "$video_file" -i "$audio_file" -c copy -map 0:v:0 -map 1:a:0 "$output_file"
+
+	if [ $? -eq 0 ]; then
+		echo "$video_file Done!"
+	else
+		echo "$video_file error..."
+		exit 1
+	fi
+done
